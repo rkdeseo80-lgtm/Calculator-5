@@ -73,6 +73,34 @@ button,input{font:inherit}.app{height:100dvh;padding:4px;display:grid;grid-templ
   }
 }
 
+
+/* Larger numeric values in the five left-side lists */
+.paper .cell{
+  min-height:34px !important;
+}
+.paper .cell .val,
+.paper .cell strong,
+.paper .cell .value{
+  font-size:22px !important;
+  line-height:30px !important;
+  font-weight:900 !important;
+}
+.paper .cell .op{
+  font-size:15px !important;
+  font-weight:800 !important;
+}
+@media (min-width:1000px){
+  .paper .cell{
+    min-height:36px !important;
+  }
+  .paper .cell .val,
+  .paper .cell strong,
+  .paper .cell .value{
+    font-size:24px !important;
+    line-height:32px !important;
+  }
+}
+
 </style>
 </head>
 <body>
