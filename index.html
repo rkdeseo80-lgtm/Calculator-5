@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>5列電卓</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;background:#148252;color:#222}
+.app{padding:6px;height:100vh;display:flex;flex-direction:column;gap:5px}
+.names,.main{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:7px}
+.namegrid,.lists{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}
+.namegrid input{width:100%;height:30px;border:1px solid #666;border-radius:5px;text-align:center;font-weight:700;font-size:13px}
+.spacer{height:30px}
+.main{flex:1;min-height:0}
+.lists{min-height:0}
+.col{background:#fff;border:2px solid #0c633d;border-radius:7px;overflow:hidden;display:flex;flex-direction:column;min-width:0}
+.col.active{border:4px solid #ffd43b}
+.paper{flex:1;min-height:220px;overflow:auto;background:repeating-linear-gradient(#fff 0,#fff 34px,#ddd 35px)}
+.cell{height:35px;position:relative;cursor:pointer;padding:7px 30px 0 22px;text-align:right;font-size:15px}
+.cell.selected{background:#ffe785}.cell.minus{color:#d40000;font-weight:800}.cell.minus .del{color:#c22}
+.cell.empty::after{content:"";position:absolute;inset:0}
+.op{position:absolute;left:5px}.del{position:absolute;right:3px;top:4px;width:25px;height:27px;border:0;border-radius:4px;background:#eee;color:#c22;font-weight:800}
+.summary{border-top:1px solid #bbb;padding:4px;font-size:10px}
+.sumrow{display:flex;justify-content:space-between;align-items:center;margin:2px 0}.sumrow strong{font-size:14px}
+.point{width:100%;height:30px;text-align:right;border:1px solid #777;border-radius:4px;font-size:14px;background:#fff;color:#111;padding:0 5px;-webkit-user-select:text;user-select:text;touch-action:manipulation}
+.tools{display:grid;grid-template-columns:1fr 1fr;gap:3px;padding:3px}
+.tools button{height:30px;border:1px solid #555;border-radius:5px;font-weight:700}.copy{color:#245aa5}.ac{color:#b11}
+.calc{display:flex;flex-direction:column;gap:4px;min-height:0}
+.display{background:#fff;border:2px solid #333;border-radius:7px;padding:4px 8px;height:64px;text-align:right}
+.expr{font-size:11px;height:18px;color:#666;white-space:nowrap;overflow:hidden}.screen{font-size:28px;font-weight:700;line-height:35px}
+.keys{display:grid;grid-template-columns:repeat(2,1fr);gap:5px;flex:1}
+.key{border:2px solid #333;border-radius:7px;background:linear-gradient(#fff,#d7d7d7);font-size:24px;font-weight:700;min-height:44px}
+.key.opkey{background:#f4e8bc;font-size:30px;color:#1687df}.key.eq{background:#ffd75a}.key.c{color:#b11}
+.copybox{position:fixed;inset:0;background:#0008;display:none;align-items:center;justify-content:center;z-index:99}
+.copybox.show{display:flex}.dialog{background:#fff;border-radius:12px;padding:16px;width:min(420px,90vw)}
+.dest{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin:10px 0}.dest button,.cancel{height:42px}
+@media (orientation:landscape) and (min-width:900px){body{overflow:hidden}.paper{min-height:280px}.key{min-height:48px}}
+
+/* iPad横画面最適化 */
+@media (orientation:landscape) and (min-width:768px){
+ body{overflow:hidden}
+ .app{height:100dvh;padding:4px;gap:3px}
+ .names,.main{grid-template-columns:minmax(0,1fr) 292px;gap:5px}
+ .namegrid,.lists{gap:3px}
+ .namegrid input{height:26px;font-size:12px}
+ .spacer{height:26px}
+ .col{border-width:1px;border-radius:5px}
+ .col.active{border-width:3px}
+ .paper{min-height:0}
+ .cell{height:31px;padding-top:5px;font-size:14px}
+ .del{top:2px;height:26px;width:24px}
+ .summary{padding:2px 3px;font-size:9px}
+ .sumrow{margin:1px 0}
+ .sumrow strong{font-size:12px}
+ .point{height:28px;font-size:13px}
+ .tools{padding:2px;gap:2px}
+ .tools button{height:26px;font-size:11px}
+ .calc{gap:3px}
+ .display{height:55px;padding:2px 6px}
+ .expr{height:15px;font-size:10px}
+ .screen{font-size:25px;line-height:32px}
+ .keys{gap:3px}
+ .key{min-height:0;height:auto;font-size:21px;border-width:1px;border-radius:5px}
+}
+@media (orientation:landscape) and (min-width:1180px){
+ .names,.main{grid-template-columns:minmax(0,1fr) 320px}
+ .cell{height:34px;font-size:15px}
+ .key{font-size:23px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+ <div class="names"><div class="namegrid" id="names"></div><div class="spacer"></div></div>
+ <div class="main">
+  <div class="lists" id="lists"></div>
+  <div class="calc">
+   <div class="display"><div class="expr" id="expr">マス選択 → 四則演算 → 数字入力 → ＝</div><div class="screen" id="screen">0</div></div>
+   <input id="ipadInput" type="text" inputmode="decimal" autocomplete="off" autocorrect="off" spellcheck="false"
+ style="position:absolute;opacity:.01;width:1px;height:1px;left:-2px;bottom:2px">
+<div class="keys" id="keys"></div>
+  </div>
+ </div>
+</div>
+<div class="copybox" id="copybox"><div class="dialog"><b id="copytitle">コピー先</b><div class="dest" id="dest"></div><button class="cancel" id="cancel">キャンセル</button></div></div>
+<script>
+(function(){
+"use strict";
+var COUNT=5, ROWS=8, KEY="five_calc_stable_v1";
+var data=Array.from({length:COUNT},()=>[]);
+var names=Array.from({length:COUNT},(_,i)=>"List"+(i+1));
+var points=Array(COUNT).fill(0);
+var active=0,target=0,current="",fresh=true,copySource=null,pendingOp=null;
+
+function fmt(n){return Number(n).toLocaleString("ja-JP",{maximumFractionDigits:2})}
+function total(i){return data[i].reduce((s,x)=>s+Number(x.effect||0),0)}
+function save(){try{localStorage.setItem(KEY,JSON.stringify({data:data,names:names,points:points}))}catch(e){}}
+function load(){try{var s=JSON.parse(localStorage.getItem(KEY)||"null");if(!s)return;
+ if(Array.isArray(s.data)&&s.data.length===COUNT)data=s.data;
+ if(Array.isArray(s.names)&&s.names.length===COUNT)names=s.names;
+ if(Array.isArray(s.points)&&s.points.length===COUNT)points=s.points;
+}catch(e){}}
+function effect(v,op,i){if(op==="+")return v;if(op==="-")return-v;
+ var base=total(i);if(op==="×")return base*v-base;if(op==="÷")return v===0?NaN:base/v-base;return v}
+function renderNames(){
+ var n=document.getElementById("names");n.innerHTML="";
+ names.forEach((x,i)=>{var inp=document.createElement("input");inp.value=x;inp.dataset.i=i;n.appendChild(inp)});
+}
+function render(){
+ var root=document.getElementById("lists");root.innerHTML="";
+ for(let i=0;i<COUNT;i++){
+  var col=document.createElement("div");col.className="col"+(i===active?" active":"");col.dataset.col=i;
+  var paper=document.createElement("div");paper.className="paper";
+  var count=Math.max(ROWS,data[i].length+1);
+  for(let r=0;r<count;r++){
+   var cell=document.createElement("div");cell.className="cell"+(r>=data[i].length?" empty":"")+(i===active&&r===target?" selected":"");
+   cell.dataset.col=i;cell.dataset.row=r;
+   if(r<data[i].length){
+    var x=data[i][r];
+    if(x.op==="-" || Number(x.effect)<0)cell.classList.add("minus");
+    cell.innerHTML='<span class="op">'+x.op+'</span><span>'+fmt(x.value)+'</span><button class="del" data-del="'+i+':'+r+'">×</button>';
+   }
+   paper.appendChild(cell);
+  }
+  col.appendChild(paper);
+  var sum=document.createElement("div");sum.className="summary";
+  sum.innerHTML='<div class="sumrow"><span>支払い合計</span><strong>'+fmt(total(i))+'円</strong></div>'+
+   '<div>付与ポイント</div><input class="point" data-point="'+i+'" type="number" min="0" inputmode="numeric" value="'+(points[i]||0)+'">'+
+   '<div class="sumrow"><span>実質金額</span><strong>'+fmt(total(i)-(points[i]||0))+'円</strong></div>';
+  col.appendChild(sum);
+  var tools=document.createElement("div");tools.className="tools";
+  tools.innerHTML='<button class="ac" data-ac="'+i+'">AC</button><button class="copy" data-copy="'+i+'">列コピー</button>';
+  col.appendChild(tools);root.appendChild(col);
+ }
+}
+function setScreen(){
+ var op=pendingOp||"";
+ document.getElementById("screen").textContent=(op?op+" ":"")+(current===""?"0":current);
+}
+function choose(i,r){
+ active=i;target=r;fresh=true;current="";
+ setScreen();document.getElementById("expr").textContent=names[i]+" "+(r+1)+"行目を選択 → 四則演算を選択";
+ render();
+}
+function commit(){
+ if(!pendingOp){document.getElementById("expr").textContent="先に ＋ − × ÷ を選んでください";return}
+ if(current===""||current==="-"||current==="."){document.getElementById("expr").textContent="数字を入力してください";return}
+ var v=Number(current);if(!Number.isFinite(v))return;
+ var ef=effect(v,pendingOp,active);
+ if(!Number.isFinite(ef)){document.getElementById("expr").textContent="0では割れません";return}
+ var pos=Math.min(target,data[active].length);
+ data[active].splice(pos,0,{value:v,op:pendingOp,effect:ef});
+ target=pos+1;current="";fresh=true;
+ document.getElementById("expr").textContent=names[active]+" "+(pos+1)+"行目に入力";
+ save();render();setScreen();
+ var inp=document.getElementById("ipadInput");inp.value="";
+}
+function selectOp(op){
+ pendingOp=op;current="";fresh=true;
+ document.getElementById("expr").textContent=names[active]+" "+(target+1)+"行目："+op+" → 数字を入力";
+ setScreen();
+ var inp=document.getElementById("ipadInput");inp.value="";
+ setTimeout(function(){inp.focus()},0);
+}
+function buildKeys(){
+ var keys=[["÷","preop"],["×","preop"],["-","preop"],["+","preop"],["C","c"],["←","b"],["=","e"],["AC","a"]];
+ var k=document.getElementById("keys");
+ keys.forEach(z=>{var b=document.createElement("button");b.className="key "+(z[1]==="o"?"opkey ":"")+(z[1]==="e"?"eq ":"")+(z[1]==="c"||z[1]==="a"?"c ":"");b.textContent=z[0];b.dataset.t=z[1];b.dataset.v=z[0];k.appendChild(b)});
+}
+document.getElementById("lists").addEventListener("click",function(e){
+ if(e.target.dataset.del){e.stopPropagation();var a=e.target.dataset.del.split(":").map(Number);data[a[0]].splice(a[1],1);target=Math.min(target,data[a[0]].length);save();render();return}
+ if(e.target.dataset.ac!==undefined){var i=Number(e.target.dataset.ac);data[i]=[];points[i]=0;active=i;target=0;save();render();return}
+ if(e.target.dataset.copy!==undefined){copySource=Number(e.target.dataset.copy);openCopy();return}
+ var cell=e.target.closest(".cell");if(cell){choose(Number(cell.dataset.col),Number(cell.dataset.row));return}
+ var col=e.target.closest(".col");if(col){active=Number(col.dataset.col);target=data[active].length;render()}
+});
+document.getElementById("lists").addEventListener("focusin",function(e){
+ if(e.target.dataset.point!==undefined){
+   active=Number(e.target.dataset.point);
+   document.querySelectorAll(".col").forEach(function(c,idx){c.classList.toggle("active",idx===active)});
+ }
+});
+document.getElementById("lists").addEventListener("input",function(e){
+ if(e.target.dataset.point!==undefined){
+   var i=Number(e.target.dataset.point);
+   points[i]=Math.max(0,Number(e.target.value)||0);
+   var col=e.target.closest(".col");
+   if(col){
+     var strongs=col.querySelectorAll(".sumrow strong");
+     if(strongs.length>1)strongs[1].textContent=fmt(total(i)-points[i])+"円";
+   }
+   save();
+ }
+});
+document.getElementById("lists").addEventListener("change",function(e){
+ if(e.target.dataset.point!==undefined){
+   var i=Number(e.target.dataset.point);
+   points[i]=Math.max(0,Number(e.target.value)||0);
+   save();
+ }
+});
+document.getElementById("names").addEventListener("input",function(e){var i=Number(e.target.dataset.i);names[i]=e.target.value||("List"+(i+1));save()});
+document.getElementById("keys").addEventListener("click",function(e){
+ var b=e.target.closest("button");if(!b)return;var t=b.dataset.t,v=b.dataset.v;
+ if(t==="preop"){selectOp(v)}
+ else if(t==="c"){current="";pendingOp=null;document.getElementById("ipadInput").value="";setScreen();document.getElementById("expr").textContent="四則演算を選択してください"}
+ else if(t==="b"){if(current.length){current=current.slice(0,-1);document.getElementById("ipadInput").value=current;setScreen()}}
+ else if(t==="e"){commit()}
+ else if(t==="a"){data[active]=[];points[active]=0;target=0;current="";pendingOp=null;save();setScreen();render()}
+});
+var ipadInput=document.getElementById("ipadInput");
+ipadInput.addEventListener("input",function(){
+ var v=this.value.replace(/,/g,"").replace(/[^0-9.]/g,"");
+ var first=v.indexOf(".");if(first>=0)v=v.slice(0,first+1)+v.slice(first+1).replace(/\./g,"");
+ this.value=v;current=v;setScreen();
+});
+ipadInput.addEventListener("keydown",function(e){
+ if(e.key==="Enter"){e.preventDefault();commit()}
+});
+function openCopy(){
+ var box=document.getElementById("copybox"),d=document.getElementById("dest");d.innerHTML="";
+ document.getElementById("copytitle").textContent=names[copySource]+" のコピー先";
+ for(let i=0;i<COUNT;i++)if(i!==copySource){var b=document.createElement("button");b.textContent=names[i];b.dataset.dest=i;d.appendChild(b)}
+ box.classList.add("show");
+}
+document.getElementById("dest").addEventListener("click",function(e){if(e.target.dataset.dest===undefined)return;var d=Number(e.target.dataset.dest);
+ data[d]=data[copySource].map(x=>({value:x.value,op:x.op,effect:x.effect}));points[d]=points[copySource];active=d;target=data[d].length;save();render();document.getElementById("copybox").classList.remove("show")});
+document.getElementById("cancel").onclick=function(){document.getElementById("copybox").classList.remove("show")};
+load();renderNames();buildKeys();render();setScreen();
+})();
+</script>
+</body></html>
