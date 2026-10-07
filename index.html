@@ -19,7 +19,7 @@ button,input{font:inherit}.app{height:100dvh;padding:5px;display:grid;grid-templ
 .cell{height:32px;position:relative;padding:6px 27px 0 18px;text-align:right;font-size:13px;cursor:pointer}.cell.selected{background:#ffe681}.cell.minus{color:#d00000;font-weight:800}
 .op{position:absolute;left:4px}.del{position:absolute;right:2px;top:3px;width:23px;height:25px;border:0;border-radius:4px;color:#c00;background:#eee;font-weight:800}
 .summary{border-top:1px solid #bbb;padding:3px;font-size:9px}.row{display:flex;justify-content:space-between;align-items:center;margin:1px 0}.row strong{font-size:12px}
-.point{display:block;width:100%;height:30px;border:2px solid #777;border-radius:5px;background:#fff;color:#111;text-align:right;font-size:15px;padding:0 5px;margin:2px 0;-webkit-appearance:none;appearance:none}
+.point{display:block;width:100%;height:30px;border:2px solid #777;border-radius:5px;background:#fff;color:#111;text-align:right;font-size:16px;padding:0 5px;margin:2px 0;-webkit-appearance:none;appearance:none}
 .tools{display:grid;grid-template-columns:1fr 1fr;gap:2px;padding:2px}.tools button{height:25px;border:1px solid #555;border-radius:4px;font-size:10px;font-weight:700}.ac{color:#b00}.copy{color:#245aa5}
 .calc{display:grid;grid-template-rows:52px 44px 1fr;gap:4px;min-height:0}.display{background:#fff;border:2px solid #333;border-radius:6px;padding:2px 7px;text-align:right}.expr{height:15px;font-size:10px;color:#555;white-space:nowrap;overflow:hidden}.screen{font-size:24px;font-weight:800;line-height:30px}
 .numberInput{width:100%;height:44px;border:3px solid #ffd43b;border-radius:7px;background:#fff;color:#111;font-size:20px;font-weight:800;text-align:right;padding:0 9px;-webkit-appearance:none;appearance:none}
@@ -35,7 +35,7 @@ button,input{font:inherit}.app{height:100dvh;padding:5px;display:grid;grid-templ
   <div class="cols" id="cols"></div>
   <div class="calc">
    <div class="display"><div class="expr" id="expr">マス選択 → 四則演算 → 数字入力</div><div class="screen" id="screen">0</div></div>
-   <input id="numInput" class="numberInput" type="text" inputmode="decimal" pattern="[0-9.]*" placeholder="ここをタップして数字入力" autocomplete="off">
+   <input id="numInput" class="numberInput" type="number" inputmode="decimal" step="any" placeholder="ここをタップして数字入力" autocomplete="off">
    <div class="keys" id="keys"></div>
   </div>
  </div>
@@ -66,7 +66,7 @@ function render(){
   }
   col.appendChild(paper);
   let s=document.createElement("div");s.className="summary";
-  s.innerHTML='<div class="row"><span>支払い合計</span><strong>'+fmt(total(i))+'円</strong></div><label>付与ポイント</label><input class="point" data-point="'+i+'" type="text" inputmode="numeric" pattern="[0-9]*" value="'+(points[i]||"")+'" placeholder="0"><div class="row"><span>実質金額</span><strong>'+fmt(total(i)-(points[i]||0))+'円</strong></div>';
+  s.innerHTML='<div class="row"><span>支払い合計</span><strong>'+fmt(total(i))+'円</strong></div><label style="display:block;font-weight:700">付与ポイント（タップして入力）</label><input class="point" data-point="'+i+'" type="number" inputmode="numeric" min="0" step="1" value="'+(points[i]||"")+'" placeholder="0"><div class="row"><span>実質金額</span><strong>'+fmt(total(i)-(points[i]||0))+'円</strong></div>';
   col.appendChild(s);
   let t=document.createElement("div");t.className="tools";t.innerHTML='<button class="ac" data-ac="'+i+'">AC</button><button class="copy" data-copy="'+i+'">列コピー</button>';col.appendChild(t);root.appendChild(col)
  }
@@ -81,10 +81,13 @@ function commit(){
  let pos=Math.min(target,data[active].length);data[active].splice(pos,0,{value:v,op:pending,effect:ef});target=pos+1;$("numInput").value="";save();render();screen();$("expr").textContent=names[active]+" "+(pos+1)+"行目に入力完了"
 }
 function buildKeys(){[["÷","op"],["×","op"],["-","op"],["+","op"],["←","back"],["C","clear"],["=","eq"],["AC","all"]].forEach(([v,t])=>{let b=document.createElement("button");b.className="key "+(t==="op"?"opkey ":"")+(t==="eq"?"eq ":"")+(t==="all"||t==="clear"?"danger ":"");b.textContent=v;b.dataset.t=t;b.dataset.v=v;$("keys").appendChild(b)})}
-$("numInput").addEventListener("input",function(){let v=this.value.replace(/,/g,"").replace(/[^0-9.]/g,"");let p=v.indexOf(".");if(p>=0)v=v.slice(0,p+1)+v.slice(p+1).replace(/\./g,"");this.value=v;screen()});
-$("numInput").addEventListener("focus",function(){if(!pending)$("expr").textContent="先に ＋ − × ÷ を選択してください"});
+$("numInput").addEventListener("input",function(){screen()});
+$("numInput").addEventListener("focus",function(){
+ $("expr").textContent=pending ? names[active]+" "+(target+1)+"行目："+pending+" 数字入力中" : "数字入力できます。続けて ＋ − × ÷ を選択してください";
+});
 $("keys").addEventListener("click",e=>{let b=e.target.closest("button");if(!b)return;let t=b.dataset.t;if(t==="op")selectOp(b.dataset.v);else if(t==="eq")commit();else if(t==="clear"){$("numInput").value="";pending=null;screen()}else if(t==="back"){$("numInput").value=$("numInput").value.slice(0,-1);screen()}else if(t==="all"){data[active]=[];points[active]=0;target=0;pending=null;$("numInput").value="";save();render();screen()}});
 $("cols").addEventListener("click",e=>{
+ if(e.target.matches("input"))return;
  if(e.target.dataset.del){let [i,r]=e.target.dataset.del.split(":").map(Number);data[i].splice(r,1);active=i;target=Math.min(r,data[i].length);save();render();return}
  if(e.target.dataset.ac!==undefined){let i=Number(e.target.dataset.ac);data[i]=[];points[i]=0;active=i;target=0;save();render();return}
  if(e.target.dataset.copy!==undefined){copySource=Number(e.target.dataset.copy);openCopy();return}
@@ -94,7 +97,7 @@ $("cols").addEventListener("click",e=>{
 $("cols").addEventListener("focusin",e=>{if(e.target.dataset.point!==undefined){active=Number(e.target.dataset.point)}});
 $("cols").addEventListener("input",e=>{
  if(e.target.dataset.point===undefined)return;
- let i=Number(e.target.dataset.point),v=e.target.value.replace(/\D/g,"");e.target.value=v;points[i]=Number(v)||0;save();
+ let i=Number(e.target.dataset.point),v=e.target.value;points[i]=Math.max(0,Number(v)||0);save();
  let col=e.target.closest(".col"),strongs=col.querySelectorAll(".row strong");if(strongs.length>1)strongs[1].textContent=fmt(total(i)-points[i])+"円"
 });
 $("names").addEventListener("input",e=>{let i=Number(e.target.dataset.name);names[i]=e.target.value||("List"+(i+1));save()});
