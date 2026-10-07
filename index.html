@@ -147,6 +147,53 @@ button,input{font:inherit}.app{height:100dvh;padding:4px;display:grid;grid-templ
   }
 }
 
+
+/* Show 8 large rows; row 9+ is reached by vertical scrolling */
+.paper{
+  --cell-h:52px;
+  height:calc(var(--cell-h) * 8) !important;
+  max-height:calc(var(--cell-h) * 8) !important;
+  min-height:calc(var(--cell-h) * 8) !important;
+  overflow-y:auto !important;
+  overflow-x:hidden !important;
+  -webkit-overflow-scrolling:touch;
+  scroll-snap-type:y proximity;
+}
+.paper .cell{
+  box-sizing:border-box !important;
+  height:var(--cell-h) !important;
+  min-height:var(--cell-h) !important;
+  max-height:var(--cell-h) !important;
+  scroll-snap-align:start;
+}
+.paper .cell .val,
+.paper .cell .value,
+.paper .cell strong,
+.paper .cell span:not(.op):not(.del){
+  font-size:35px !important;
+  line-height:48px !important;
+  font-weight:900 !important;
+}
+.paper .cell .op{
+  font-size:23px !important;
+  line-height:48px !important;
+  font-weight:900 !important;
+}
+@media (min-width:1000px){
+  .paper{--cell-h:55px;}
+  .paper .cell .val,
+  .paper .cell .value,
+  .paper .cell strong,
+  .paper .cell span:not(.op):not(.del){
+    font-size:37px !important;
+    line-height:51px !important;
+  }
+  .paper .cell .op{
+    font-size:24px !important;
+    line-height:51px !important;
+  }
+}
+
 </style>
 </head>
 <body>
