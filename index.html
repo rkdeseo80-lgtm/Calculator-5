@@ -428,6 +428,77 @@ button,input{font:inherit}.app{height:100dvh;padding:4px;display:grid;grid-templ
   .paper .cell .op{font-size:25px !important;}
 }
 
+
+/* Responsive cell typography by visible column count */
+.paper .cell{
+  grid-template-columns:26px minmax(0,1fr) 27px !important;
+  column-gap:3px !important;
+  padding:0 4px !important;
+}
+.paper .cell .op{
+  font-size:18px !important;
+  font-weight:400 !important;
+  line-height:1 !important;
+  text-align:center !important;
+}
+.paper .cell .val,
+.paper .cell .value,
+.paper .cell strong,
+.paper .cell span:not(.op):not(.del){
+  font-size:var(--cell-number-size,52px) !important;
+  line-height:.88 !important;
+  font-weight:900 !important;
+  letter-spacing:-2.5px !important;
+  white-space:nowrap !important;
+  overflow:visible !important;
+  text-overflow:clip !important;
+}
+.paper .cell .del{
+  width:25px !important;
+  height:25px !important;
+  font-size:13px !important;
+}
+
+/* JS also sets the exact value, these are safe CSS fallbacks */
+html[data-vcols="5"]{--cell-number-size:52px}
+html[data-vcols="4"]{--cell-number-size:60px}
+html[data-vcols="3"]{--cell-number-size:70px}
+html[data-vcols="2"]{--cell-number-size:82px}
+html[data-vcols="1"]{--cell-number-size:94px}
+
+
+/* Emphasize payment total most; distinguish effective amount by text color */
+.summary .row.pay{
+  min-height:42px !important;
+  align-items:center !important;
+}
+.summary .row.pay span{
+  font-size:12px !important;
+  font-weight:700 !important;
+}
+.summary .row.pay strong{
+  font-size:30px !important;
+  line-height:1 !important;
+  font-weight:900 !important;
+  letter-spacing:-1px !important;
+  white-space:nowrap !important;
+}
+.summary .row.real{
+  background:#fff3b8 !important;
+}
+.summary .row.real span{
+  font-size:12px !important;
+  font-weight:700 !important;
+  color:#b42318 !important;
+}
+.summary .row.real strong{
+  font-size:23px !important;
+  line-height:1 !important;
+  font-weight:900 !important;
+  color:#d11a1a !important;
+  white-space:nowrap !important;
+}
+
 </style>
 </head>
 <body>
@@ -455,6 +526,9 @@ function load(){try{let s=JSON.parse(localStorage.getItem(STORE)||"null");if(!s)
 function effect(v,op,i){if(op==="+")return v;if(op==="-")return-v;let b=total(i);if(op==="×")return b*v-b;if(op==="÷")return v===0?NaN:b/v-b;return v}
 function applyVisibleCols(){
  document.documentElement.style.setProperty("--visible-cols",visibleCols);
+ document.documentElement.setAttribute("data-vcols",String(visibleCols));
+ const sizes={1:94,2:82,3:70,4:60,5:52};
+ document.documentElement.style.setProperty("--cell-number-size",(sizes[visibleCols]||52)+"px");
  $("columnCount").value=String(visibleCols);
 }
 function renderNames(){let r=$("names");r.innerHTML="";for(let i=0;i<visibleCols;i++){let x=document.createElement("input");x.value=names[i];x.dataset.name=i;r.appendChild(x)}}
