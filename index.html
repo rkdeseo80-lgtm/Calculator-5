@@ -512,11 +512,42 @@ html[data-vcols="1"]{--cell-number-size:94px}
 }
 .bulkcopy:active{background:#dceeff}
 
+
+.colpicker{
+  display:none;
+  position:absolute;
+  right:6px;
+  top:43px;
+  z-index:1000;
+  background:#fff;
+  border:2px solid #333;
+  border-radius:8px;
+  padding:8px;
+  box-shadow:0 3px 12px rgba(0,0,0,.25);
+  color:#111;
+  white-space:nowrap;
+}
+.colpicker.open{display:block}
+.colpicker label{
+  display:inline-flex;
+  align-items:center;
+  gap:3px;
+  margin:0 5px;
+  font-size:13px;
+  font-weight:800;
+}
+.colpicker input{width:20px;height:20px}
+
 </style>
 </head>
 <body>
 <div class="app">
- <div class="top"><div class="names" id="names"></div><div class="viewctl"><button id="bulkCopy" class="bulkcopy" type="button">一括コピー</button> 表示列 <select id="columnCount"><option>1</option><option>2</option><option>3</option><option>4</option><option selected>5</option></select></div></div>
+ <div class="top"><div class="names" id="names"></div><div class="viewctl">
+<button id="bulkCopy" class="bulkcopy" type="button">一括コピー</button>
+<button id="chooseCols" class="bulkcopy" type="button">表示列を選択</button>
+<div id="colPicker" class="colpicker"></div>
+<select id="columnCount" style="display:none"><option>1</option><option>2</option><option>3</option><option>4</option><option selected>5</option></select>
+</div></div>
  <div class="main">
   <div class="cols" id="cols"></div>
   <div class="calc">
@@ -531,23 +562,24 @@ html[data-vcols="1"]{--cell-number-size:94px}
 "use strict";
 const N=5,ROWS=8,STORE="five_calc_keypad_v1";
 let data=Array.from({length:N},()=>[]),names=Array.from({length:N},(_,i)=>"List"+(i+1)),points=Array(N).fill(0);
-let active=0,target=0,pending="+",current="",copySource=null,visibleCols=5;
+let active=0,target=0,pending="+",current="",copySource=null,visibleCols=5,visibleSet=[0,1,2,3,4];
 const $=id=>document.getElementById(id),fmt=n=>Number(n).toLocaleString("ja-JP",{maximumFractionDigits:2});
 function total(i){return data[i].reduce((s,x)=>s+Number(x.effect||0),0)}
-function save(){try{localStorage.setItem(STORE,JSON.stringify({data,names,points,visibleCols}))}catch(e){}}
-function load(){try{let s=JSON.parse(localStorage.getItem(STORE)||"null");if(!s)return;if(Array.isArray(s.data)&&s.data.length===N)data=s.data;if(Array.isArray(s.names)&&s.names.length===N)names=s.names;if(Array.isArray(s.points)&&s.points.length===N)points=s.points;if(Number.isInteger(s.visibleCols)&&s.visibleCols>=1&&s.visibleCols<=5)visibleCols=s.visibleCols}catch(e){}}
+function save(){try{localStorage.setItem(STORE,JSON.stringify({data,names,points,visibleCols,visibleSet}))}catch(e){}}
+function load(){try{let s=JSON.parse(localStorage.getItem(STORE)||"null");if(!s)return;if(Array.isArray(s.data)&&s.data.length===N)data=s.data;if(Array.isArray(s.names)&&s.names.length===N)names=s.names;if(Array.isArray(s.points)&&s.points.length===N)points=s.points;if(Array.isArray(s.visibleSet)&&s.visibleSet.length){visibleSet=s.visibleSet.filter(i=>Number.isInteger(i)&&i>=0&&i<5);if(!visibleSet.length)visibleSet=[0];visibleCols=visibleSet.length}else if(Number.isInteger(s.visibleCols)&&s.visibleCols>=1&&s.visibleCols<=5){visibleCols=s.visibleCols;visibleSet=Array.from({length:visibleCols},(_,i)=>i)}}catch(e){}}
 function effect(v,op,i){if(op==="+")return v;if(op==="-")return-v;let b=total(i);if(op==="×")return b*v-b;if(op==="÷")return v===0?NaN:b/v-b;return v}
 function applyVisibleCols(){
+ visibleCols=visibleSet.length;
  document.documentElement.style.setProperty("--visible-cols",visibleCols);
  document.documentElement.setAttribute("data-vcols",String(visibleCols));
  const sizes={1:94,2:82,3:70,4:60,5:52};
  document.documentElement.style.setProperty("--cell-number-size",(sizes[visibleCols]||52)+"px");
  $("columnCount").value=String(visibleCols);
 }
-function renderNames(){let r=$("names");r.innerHTML="";for(let i=0;i<visibleCols;i++){let x=document.createElement("input");x.value=names[i];x.dataset.name=i;r.appendChild(x)}}
+function renderNames(){let r=$("names");r.innerHTML="";for(const i of visibleSet){let x=document.createElement("input");x.value=names[i];x.dataset.name=i;r.appendChild(x)}}
 function render(){
  let root=$("cols");root.innerHTML="";
- for(let i=0;i<visibleCols;i++){
+ for(const i of visibleSet){
   let col=document.createElement("div");col.className="col"+(i===active?" active":"");
   let paper=document.createElement("div");paper.className="paper";
   let count=Math.max(ROWS+8,data[i].length+8);
@@ -638,11 +670,40 @@ function buildKeys(){
  ks.forEach(([v,t])=>{let b=document.createElement("button");b.type="button";b.className="key "+(t==="op"?"opkey ":"")+(t==="eq"?"eq ":"")+(t==="c"||t==="all"?"danger ":"");b.textContent=v;b.dataset.t=t;b.dataset.v=v;$("keys").appendChild(b)});updateKeyState();
 }
 
+
+function renderColPicker(){
+ const p=$("colPicker");
+ p.innerHTML="";
+ for(let i=0;i<5;i++){
+   const lab=document.createElement("label");
+   lab.innerHTML='<input type="checkbox" data-vcol="'+i+'" '+(visibleSet.includes(i)?"checked":"")+'> '+names[i];
+   p.appendChild(lab);
+ }
+}
+$("chooseCols").addEventListener("click",function(e){
+ e.stopPropagation();renderColPicker();$("colPicker").classList.toggle("open");
+});
+$("colPicker").addEventListener("change",function(e){
+ if(e.target.dataset.vcol===undefined)return;
+ const i=Number(e.target.dataset.vcol);
+ let next=[...visibleSet];
+ if(e.target.checked){if(!next.includes(i))next.push(i)}
+ else next=next.filter(x=>x!==i);
+ if(!next.length){e.target.checked=true;return}
+ next.sort((a,b)=>a-b);
+ visibleSet=next;visibleCols=visibleSet.length;
+ if(!visibleSet.includes(active)){active=visibleSet[0];target=0;current="";pending="+"}
+ save();applyVisibleCols();renderNames();render();updateScreen();renderColPicker();
+});
+document.addEventListener("click",function(e){
+ if(!e.target.closest(".viewctl"))$("colPicker").classList.remove("open");
+});
+
 $("bulkCopy").addEventListener("click",function(){
  if(current!=="")commitPendingSilently();
  const src=active;
  const targets=[];
- for(let i=0;i<visibleCols;i++)if(i!==src)targets.push(i);
+ for(const i of visibleSet)if(i!==src)targets.push(i);
  if(!targets.length){$("expr").textContent="コピー先の列がありません";return}
  const label=names[src]||("List"+(src+1));
  if(!confirm(label+" の内容を、他の表示列 "+targets.length+"列へ一括コピーしますか？"))return;
