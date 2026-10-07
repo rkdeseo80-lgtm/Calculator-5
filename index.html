@@ -297,6 +297,75 @@ button,input{font:inherit}.app{height:100dvh;padding:4px;display:grid;grid-templ
   .screen{font-size:32px !important;}
 }
 
+
+/* Balanced large-cell layout */
+.paper .cell{
+  position:relative !important;
+  display:grid !important;
+  grid-template-columns:42px minmax(0,1fr) 30px !important;
+  align-items:center !important;
+  column-gap:5px !important;
+  padding:0 5px !important;
+  overflow:hidden !important;
+}
+.paper .cell .op{
+  grid-column:1 !important;
+  position:static !important;
+  width:42px !important;
+  margin:0 !important;
+  padding:0 !important;
+  text-align:center !important;
+  font-size:25px !important;
+  line-height:1 !important;
+  font-weight:900 !important;
+  white-space:nowrap !important;
+}
+.paper .cell .val,
+.paper .cell .value,
+.paper .cell strong,
+.paper .cell span:not(.op):not(.del){
+  grid-column:2 !important;
+  min-width:0 !important;
+  margin:0 !important;
+  padding:0 !important;
+  font-size:54px !important;
+  line-height:.95 !important;
+  font-weight:900 !important;
+  letter-spacing:-1.5px !important;
+  white-space:nowrap !important;
+  overflow:hidden !important;
+  text-overflow:clip !important;
+  text-align:left !important;
+}
+.paper .cell .del{
+  grid-column:3 !important;
+  position:static !important;
+  justify-self:end !important;
+  align-self:start !important;
+  margin-top:5px !important;
+  width:27px !important;
+  height:27px !important;
+  padding:0 !important;
+  font-size:15px !important;
+  line-height:25px !important;
+}
+@media (min-width:1000px){
+  .paper .cell{
+    grid-template-columns:44px minmax(0,1fr) 32px !important;
+    column-gap:6px !important;
+  }
+  .paper .cell .op{
+    width:44px !important;
+    font-size:27px !important;
+  }
+  .paper .cell .val,
+  .paper .cell .value,
+  .paper .cell strong,
+  .paper .cell span:not(.op):not(.del){
+    font-size:58px !important;
+  }
+}
+
 </style>
 </head>
 <body>
