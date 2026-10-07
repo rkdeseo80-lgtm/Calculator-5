@@ -19,7 +19,7 @@ button,input{font:inherit}.app{height:100dvh;padding:4px;display:grid;grid-templ
 .cell{height:32px;position:relative;padding:6px 27px 0 18px;text-align:right;font-size:13px;cursor:pointer}.cell.selected{background:#ffe681}.cell.minus{color:#d00000;font-weight:800}
 .op{position:absolute;left:4px}.del{position:absolute;right:2px;top:3px;width:23px;height:25px;border:0;border-radius:4px;color:#c00;background:#eee;font-weight:800}
 .summary{border-bottom:2px solid #999;padding:4px;font-size:10px;background:#fff}.row{display:flex;justify-content:space-between;align-items:center;margin:2px 0}.row strong{font-size:17px;line-height:22px}.row.pay strong{font-size:19px}.row.real{background:#fff3b8;border-radius:4px;padding:3px 2px}.row.real strong{font-size:20px;font-weight:900}
-.point{display:block;width:100%;height:29px;border:2px solid #777;border-radius:5px;background:#fff;color:#111;text-align:right;font-size:16px;padding:0 5px;margin:2px 0;-webkit-appearance:none;appearance:none}
+.point{display:block;width:100%;height:34px;border:2px solid #777;border-radius:5px;background:#fff;color:#111;text-align:right;font-size:16px;padding:0 5px;margin:2px 0;-webkit-appearance:none;appearance:none}
 .tools{display:grid;grid-template-columns:1fr 1fr;gap:2px;padding:2px}.tools button{height:25px;border:1px solid #555;border-radius:4px;font-size:10px;font-weight:700}.acsmall{color:#b00}.copy{color:#245aa5}
 .calc{display:grid;grid-template-rows:51px 1fr;gap:3px;min-height:0}.display{background:#fff;border:2px solid #333;border-radius:6px;padding:2px 7px;text-align:right}.expr{height:15px;font-size:10px;color:#555;white-space:nowrap;overflow:hidden}.screen{font-size:24px;font-weight:800;line-height:30px}
 .keys{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:repeat(5,minmax(0,1fr));gap:4px;min-height:0;height:100%}.key{border:2px solid #333;border-radius:7px;background:linear-gradient(#fff,#ddd);font-size:27px;font-weight:800;min-width:0;min-height:44px;color:#1687df;touch-action:manipulation;-webkit-user-select:none;user-select:none}.opkey{background:#f7ebbd}.opkey.chosen{background:#ffd45c}.key.locked{opacity:.38}.eq{background:#ffd45c}.danger{color:#c00}
@@ -63,7 +63,7 @@ function render(){
    paper.appendChild(c)
   }
   let s=document.createElement("div");s.className="summary";
-  s.innerHTML='<div class="row pay"><span>支払い合計</span><strong>'+fmt(total(i))+'円</strong></div><div class="row real"><span>実質金額</span><strong>'+fmt(total(i)-(points[i]||0))+'円</strong></div><label>付与ポイント</label><input class="point" data-point="'+i+'" type="number" inputmode="numeric" min="0" step="1" value="'+(points[i]||"")+'" placeholder="0">';
+  s.innerHTML='<div class="row pay"><span>支払い合計</span><strong>'+fmt(total(i))+'円</strong></div><div class="row real"><span>実質金額</span><strong>'+fmt(total(i)-(points[i]||0))+'円</strong></div><label>付与ポイント</label><input class="point" data-point="'+i+'" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" value="'+(points[i]||"")+'" placeholder="0">';
   col.appendChild(s);
   col.appendChild(paper);
   let t=document.createElement("div");t.className="tools";t.innerHTML='<button class="acsmall" data-ac="'+i+'">AC</button><button class="copy" data-copy="'+i+'">列コピー</button>';col.appendChild(t);root.appendChild(col)
@@ -149,6 +149,7 @@ $("keys").addEventListener("click",e=>{let b=e.target.closest("button");if(!b)re
  else if(t==="all"){data[active]=[];points[active]=0;target=0;pending="+";current="";save();render();updateScreen()}
 });
 $("cols").addEventListener("pointerdown",function(e){
+ if(e.target.closest("input"))return;
  // When another calculation cell is touched, save the current number first.
  let cell=e.target.closest(".cell");
  if(cell && current!==""){
@@ -174,15 +175,9 @@ $("cols").addEventListener("click",e=>{
  let c=e.target.closest(".cell");if(c)chooseCell(Number(c.dataset.col),Number(c.dataset.row))
 });
 /* Point field alone uses the native iPad keyboard. Never re-render while it is focused. */
-$("cols").addEventListener("focusin",e=>{
+$("cols").addEventListener("focusin",function(e){
  if(e.target.dataset.point!==undefined){
-   commitPendingSilently();
    active=Number(e.target.dataset.point);
-   render();
-   setTimeout(function(){
-     let inp=document.querySelector('.point[data-point="'+active+'"]');
-     if(inp) inp.focus();
-   },0);
  }
 });
 $("cols").addEventListener("input",e=>{if(e.target.dataset.point===undefined)return;let i=Number(e.target.dataset.point);points[i]=Math.max(0,Number(e.target.value)||0);save();let col=e.target.closest(".col"),vals=col.querySelectorAll(".row strong");if(vals.length>1)vals[1].textContent=fmt(total(i)-points[i])+"円"});
