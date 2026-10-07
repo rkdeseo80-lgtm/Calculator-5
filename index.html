@@ -18,7 +18,7 @@ button,input{font:inherit}.app{height:100dvh;padding:4px;display:grid;grid-templ
 .paper{flex:1;min-height:0;overflow:auto;background:repeating-linear-gradient(#fff 0,#fff 31px,#ddd 32px)}
 .cell{height:32px;position:relative;padding:6px 27px 0 18px;text-align:right;font-size:13px;cursor:pointer}.cell.selected{background:#ffe681}.cell.minus{color:#d00000;font-weight:800}
 .op{position:absolute;left:4px}.del{position:absolute;right:2px;top:3px;width:23px;height:25px;border:0;border-radius:4px;color:#c00;background:#eee;font-weight:800}
-.summary{border-top:2px solid #999;padding:4px;font-size:10px}.row{display:flex;justify-content:space-between;align-items:center;margin:2px 0}.row strong{font-size:17px;line-height:22px}.row.pay strong{font-size:19px}.row.real{background:#fff3b8;border-radius:4px;padding:3px 2px}.row.real strong{font-size:20px;font-weight:900}
+.summary{border-bottom:2px solid #999;padding:4px;font-size:10px;background:#fff}.row{display:flex;justify-content:space-between;align-items:center;margin:2px 0}.row strong{font-size:17px;line-height:22px}.row.pay strong{font-size:19px}.row.real{background:#fff3b8;border-radius:4px;padding:3px 2px}.row.real strong{font-size:20px;font-weight:900}
 .point{display:block;width:100%;height:29px;border:2px solid #777;border-radius:5px;background:#fff;color:#111;text-align:right;font-size:16px;padding:0 5px;margin:2px 0;-webkit-appearance:none;appearance:none}
 .tools{display:grid;grid-template-columns:1fr 1fr;gap:2px;padding:2px}.tools button{height:25px;border:1px solid #555;border-radius:4px;font-size:10px;font-weight:700}.acsmall{color:#b00}.copy{color:#245aa5}
 .calc{display:grid;grid-template-rows:51px 1fr;gap:3px;min-height:0}.display{background:#fff;border:2px solid #333;border-radius:6px;padding:2px 7px;text-align:right}.expr{height:15px;font-size:10px;color:#555;white-space:nowrap;overflow:hidden}.screen{font-size:24px;font-weight:800;line-height:30px}
@@ -33,7 +33,7 @@ button,input{font:inherit}.app{height:100dvh;padding:4px;display:grid;grid-templ
  <div class="main">
   <div class="cols" id="cols"></div>
   <div class="calc">
-   <div class="display"><div class="expr" id="expr">＋は数字だけで入力OK / −×÷は先に選択 / 別セルタップで自動確定</div><div class="screen" id="screen">0</div></div>
+   <div class="display"><div class="expr" id="expr">数字入力後、＝/＋/−/×/÷/別セルタップで確定</div><div class="screen" id="screen">0</div></div>
    <div class="keys" id="keys"></div>
   </div>
  </div>
@@ -62,10 +62,10 @@ function render(){
    if(r<data[i].length){let x=data[i][r];if(x.op==="-"||Number(x.effect)<0)c.classList.add("minus");c.innerHTML='<span class="op">'+x.op+'</span>'+fmt(x.value)+'<button class="del" data-del="'+i+':'+r+'">×</button>'}
    paper.appendChild(c)
   }
-  col.appendChild(paper);
   let s=document.createElement("div");s.className="summary";
-  s.innerHTML='<div class="row pay"><span>支払い合計</span><strong>'+fmt(total(i))+'円</strong></div><label>付与ポイント</label><input class="point" data-point="'+i+'" type="number" inputmode="numeric" min="0" step="1" value="'+(points[i]||"")+'" placeholder="0"><div class="row"><span>実質金額</span><strong>'+fmt(total(i)-(points[i]||0))+'円</strong></div>';
+  s.innerHTML='<div class="row pay"><span>支払い合計</span><strong>'+fmt(total(i))+'円</strong></div><div class="row real"><span>実質金額</span><strong>'+fmt(total(i)-(points[i]||0))+'円</strong></div><label>付与ポイント</label><input class="point" data-point="'+i+'" type="number" inputmode="numeric" min="0" step="1" value="'+(points[i]||"")+'" placeholder="0">';
   col.appendChild(s);
+  col.appendChild(paper);
   let t=document.createElement("div");t.className="tools";t.innerHTML='<button class="acsmall" data-ac="'+i+'">AC</button><button class="copy" data-copy="'+i+'">列コピー</button>';col.appendChild(t);root.appendChild(col)
  }
 }
@@ -103,7 +103,25 @@ function chooseCell(i,r){
  updateScreen();
  $("expr").textContent=names[i]+" "+(r+1)+"行目：数字入力で＋ / 必要なら − × ÷ を選択";
 }
-function chooseOp(op){pending=op;current="";updateScreen();$("expr").textContent=names[active]+" "+(target+1)+"行目："+op+" → 数字を入力"}
+function chooseOp(op){
+ if(current!==""){
+   let usedOp=pending||"+";
+   let v=Number(current);
+   if(Number.isFinite(v)){
+     let ef=effect(v,usedOp,active);
+     if(!Number.isFinite(ef)){$("expr").textContent="0では割れません";return}
+     let pos=Math.min(target,data[active].length);
+     data[active].splice(pos,0,{value:v,op:usedOp,effect:ef});
+     target=pos+1;
+     current="";
+     save();
+     render();
+   }
+ }
+ pending=op;
+ updateScreen();
+ $("expr").textContent=names[active]+" "+(target+1)+"行目："+op+" → 数字を入力";
+}
 function number(v){
  if(!pending) pending="+";
  if(v==="."){
