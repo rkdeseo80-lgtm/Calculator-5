@@ -22,7 +22,7 @@ button,input{font:inherit}.app{height:100dvh;padding:4px;display:grid;grid-templ
 .point{display:block;width:100%;height:29px;border:2px solid #777;border-radius:5px;background:#fff;color:#111;text-align:right;font-size:16px;padding:0 5px;margin:2px 0;-webkit-appearance:none;appearance:none}
 .tools{display:grid;grid-template-columns:1fr 1fr;gap:2px;padding:2px}.tools button{height:25px;border:1px solid #555;border-radius:4px;font-size:10px;font-weight:700}.acsmall{color:#b00}.copy{color:#245aa5}
 .calc{display:grid;grid-template-rows:51px 1fr;gap:3px;min-height:0}.display{background:#fff;border:2px solid #333;border-radius:6px;padding:2px 7px;text-align:right}.expr{height:15px;font-size:10px;color:#555;white-space:nowrap;overflow:hidden}.screen{font-size:24px;font-weight:800;line-height:30px}
-.keys{display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(5,1fr);gap:3px;min-height:0}.key{border:2px solid #333;border-radius:7px;background:linear-gradient(#fff,#ddd);font-size:24px;font-weight:800;min-height:0;color:#1687df}.opkey{background:#f7ebbd}.eq{background:#ffd45c}.danger{color:#c00}
+.keys{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:repeat(5,minmax(0,1fr));gap:4px;min-height:0;height:100%}.key{border:2px solid #333;border-radius:7px;background:linear-gradient(#fff,#ddd);font-size:27px;font-weight:800;min-width:0;min-height:44px;color:#1687df;touch-action:manipulation;-webkit-user-select:none;user-select:none}.opkey{background:#f7ebbd}.opkey.chosen{background:#ffd45c}.key.locked{opacity:.38}.eq{background:#ffd45c}.danger{color:#c00}
 .overlay{display:none;position:fixed;inset:0;background:#0008;z-index:50;align-items:center;justify-content:center}.overlay.show{display:flex}.dialog{width:min(420px,90vw);background:#fff;border-radius:12px;padding:14px}.dest{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin:10px 0}.dest button,.cancel{height:40px}
 @media (orientation:landscape) and (min-width:1000px){.top,.main{grid-template-columns:minmax(0,1fr) 310px}.cell{height:33px}.paper{background:repeating-linear-gradient(#fff 0,#fff 32px,#ddd 33px)}}
 </style>
@@ -33,7 +33,7 @@ button,input{font:inherit}.app{height:100dvh;padding:4px;display:grid;grid-templ
  <div class="main">
   <div class="cols" id="cols"></div>
   <div class="calc">
-   <div class="display"><div class="expr" id="expr">①マス選択 → ②四則演算 → ③数字入力</div><div class="screen" id="screen">0</div></div>
+   <div class="display"><div class="expr" id="expr">①マス → ②＋−×÷ → ③テンキー → ④＝</div><div class="screen" id="screen">0</div></div>
    <div class="keys" id="keys"></div>
   </div>
  </div>
@@ -69,26 +69,45 @@ function render(){
   let t=document.createElement("div");t.className="tools";t.innerHTML='<button class="acsmall" data-ac="'+i+'">AC</button><button class="copy" data-copy="'+i+'">列コピー</button>';col.appendChild(t);root.appendChild(col)
  }
 }
-function updateScreen(){$("screen").textContent=(pending?pending+" ":"")+(current===""?"0":current)}
+function updateScreen(){
+ $("screen").textContent=(pending?pending+" ":"")+(current===""?"0":current);
+ updateKeyState();
+}
+function updateKeyState(){
+ document.querySelectorAll("#keys .key").forEach(function(b){
+   if(b.dataset.t==="n"||b.dataset.t==="sign"||b.dataset.t==="back"||b.dataset.t==="c"){
+     b.classList.toggle("locked",!pending);
+   }
+   if(b.dataset.t==="op")b.classList.toggle("chosen",pending===b.dataset.v);
+ });
+}
 function chooseCell(i,r){active=i;target=r;pending=null;current="";render();updateScreen();$("expr").textContent=names[i]+" "+(r+1)+"行目 → 四則演算を選択"}
 function chooseOp(op){pending=op;current="";updateScreen();$("expr").textContent=names[active]+" "+(target+1)+"行目："+op+" → 数字を入力"}
 function number(v){
- if(!pending){$("expr").textContent="先に ＋ − × ÷ を押してください";return}
- if(v==="."){if(current.includes("."))return;current=current===""?"0.":current+"."}
- else current+=v;
- updateScreen()
+ if(!pending){
+   $("expr").textContent="先に ＋・−・×・÷ のどれかを押してください";
+   return;
+ }
+ if(v==="."){
+   if(current.includes("."))return;
+   current=current===""?"0.":current+".";
+ }else{
+   if(current==="0")current=v; else current+=v;
+ }
+ updateScreen();
+ $("expr").textContent=names[active]+" "+(target+1)+"行目："+pending+" "+current;
 }
 function commit(){
  if(!pending){$("expr").textContent="先に四則演算を選択";return}
  if(current===""||current==="0."){$("expr").textContent="数字を入力してください";return}
  let v=Number(current);if(!Number.isFinite(v))return;let ef=effect(v,pending,active);if(!Number.isFinite(ef)){$("expr").textContent="0では割れません";return}
- let pos=Math.min(target,data[active].length);data[active].splice(pos,0,{value:v,op:pending,effect:ef});target=pos+1;current="";save();render();updateScreen();$("expr").textContent=names[active]+" "+(pos+1)+"行目に入力完了"
+ let pos=Math.min(target,data[active].length);data[active].splice(pos,0,{value:v,op:pending,effect:ef});target=pos+1;current="";pending=null;save();render();updateScreen();$("expr").textContent=names[active]+" "+(pos+1)+"行目に入力完了"
 }
 function buildKeys(){
  let ks=[["7","n"],["8","n"],["9","n"],["÷","op"],["4","n"],["5","n"],["6","n"],["×","op"],["1","n"],["2","n"],["3","n"],["-","op"],["0","n"],[".","n"],["C","c"],["+","op"],["±","sign"],["←","back"],["=","eq"],["AC","all"]];
- ks.forEach(([v,t])=>{let b=document.createElement("button");b.className="key "+(t==="op"?"opkey ":"")+(t==="eq"?"eq ":"")+(t==="c"||t==="all"?"danger ":"");b.textContent=v;b.dataset.t=t;b.dataset.v=v;$("keys").appendChild(b)})
+ ks.forEach(([v,t])=>{let b=document.createElement("button");b.type="button";b.className="key "+(t==="op"?"opkey ":"")+(t==="eq"?"eq ":"")+(t==="c"||t==="all"?"danger ":"");b.textContent=v;b.dataset.t=t;b.dataset.v=v;$("keys").appendChild(b)});updateKeyState();
 }
-$("keys").addEventListener("click",e=>{let b=e.target.closest("button");if(!b)return;let t=b.dataset.t,v=b.dataset.v;
+$("keys").addEventListener("click",e=>{let b=e.target.closest("button");if(!b)return;e.preventDefault();let t=b.dataset.t,v=b.dataset.v;
  if(t==="n")number(v);else if(t==="op")chooseOp(v);else if(t==="eq")commit();else if(t==="c"){current="";updateScreen()}
  else if(t==="back"){current=current.slice(0,-1);updateScreen()}else if(t==="sign"){if(current!=="")current=String(-Number(current));updateScreen()}
  else if(t==="all"){data[active]=[];points[active]=0;target=0;pending=null;current="";save();render();updateScreen()}
