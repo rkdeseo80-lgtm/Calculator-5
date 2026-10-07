@@ -499,11 +499,24 @@ html[data-vcols="1"]{--cell-number-size:94px}
   white-space:nowrap !important;
 }
 
+
+.bulkcopy{
+  height:27px;
+  padding:0 10px;
+  border:1px solid #333;
+  border-radius:5px;
+  background:#fff;
+  color:#1763a6;
+  font-size:12px;
+  font-weight:800;
+}
+.bulkcopy:active{background:#dceeff}
+
 </style>
 </head>
 <body>
 <div class="app">
- <div class="top"><div class="names" id="names"></div><div class="viewctl">表示列 <select id="columnCount"><option>1</option><option>2</option><option>3</option><option>4</option><option selected>5</option></select></div></div>
+ <div class="top"><div class="names" id="names"></div><div class="viewctl"><button id="bulkCopy" class="bulkcopy" type="button">一括コピー</button> 表示列 <select id="columnCount"><option>1</option><option>2</option><option>3</option><option>4</option><option selected>5</option></select></div></div>
  <div class="main">
   <div class="cols" id="cols"></div>
   <div class="calc">
@@ -624,6 +637,25 @@ function buildKeys(){
  let ks=[["7","n"],["8","n"],["9","n"],["÷","op"],["4","n"],["5","n"],["6","n"],["×","op"],["1","n"],["2","n"],["3","n"],["-","op"],["0","n"],[".","n"],["C","c"],["+","op"],["±","sign"],["←","back"],["=","eq"],["AC","all"]];
  ks.forEach(([v,t])=>{let b=document.createElement("button");b.type="button";b.className="key "+(t==="op"?"opkey ":"")+(t==="eq"?"eq ":"")+(t==="c"||t==="all"?"danger ":"");b.textContent=v;b.dataset.t=t;b.dataset.v=v;$("keys").appendChild(b)});updateKeyState();
 }
+
+$("bulkCopy").addEventListener("click",function(){
+ if(current!=="")commitPendingSilently();
+ const src=active;
+ const targets=[];
+ for(let i=0;i<visibleCols;i++)if(i!==src)targets.push(i);
+ if(!targets.length){$("expr").textContent="コピー先の列がありません";return}
+ const label=names[src]||("List"+(src+1));
+ if(!confirm(label+" の内容を、他の表示列 "+targets.length+"列へ一括コピーしますか？"))return;
+ targets.forEach(function(i){
+   data[i]=data[src].map(function(x){return {...x}});
+   points[i]=points[src]||0;
+ });
+ save();
+ render();
+ updateScreen();
+ $("expr").textContent=label+" → 他の表示列へ一括コピーしました";
+});
+
 $("columnCount").addEventListener("change",function(){
  if(current!=="")commitPendingSilently();
  visibleCols=Math.max(1,Math.min(5,Number(this.value)||5));
