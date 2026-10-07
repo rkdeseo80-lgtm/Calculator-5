@@ -33,7 +33,7 @@ button,input{font:inherit}.app{height:100dvh;padding:4px;display:grid;grid-templ
  <div class="main">
   <div class="cols" id="cols"></div>
   <div class="calc">
-   <div class="display"><div class="expr" id="expr">①マス → ②＋−×÷ → ③数字 → 別セルをタップで確定</div><div class="screen" id="screen">0</div></div>
+   <div class="display"><div class="expr" id="expr">＋は数字だけで入力OK / −×÷は先に選択 / 別セルタップで自動確定</div><div class="screen" id="screen">0</div></div>
    <div class="keys" id="keys"></div>
   </div>
  </div>
@@ -44,7 +44,7 @@ button,input{font:inherit}.app{height:100dvh;padding:4px;display:grid;grid-templ
 "use strict";
 const N=5,ROWS=8,STORE="five_calc_keypad_v1";
 let data=Array.from({length:N},()=>[]),names=Array.from({length:N},(_,i)=>"List"+(i+1)),points=Array(N).fill(0);
-let active=0,target=0,pending=null,current="",copySource=null;
+let active=0,target=0,pending="+",current="",copySource=null;
 const $=id=>document.getElementById(id),fmt=n=>Number(n).toLocaleString("ja-JP",{maximumFractionDigits:2});
 function total(i){return data[i].reduce((s,x)=>s+Number(x.effect||0),0)}
 function save(){try{localStorage.setItem(STORE,JSON.stringify({data,names,points}))}catch(e){}}
@@ -76,7 +76,7 @@ function updateScreen(){
 function updateKeyState(){
  document.querySelectorAll("#keys .key").forEach(function(b){
    if(b.dataset.t==="n"||b.dataset.t==="sign"||b.dataset.t==="back"||b.dataset.t==="c"){
-     b.classList.toggle("locked",!pending);
+     b.classList.remove("locked");
    }
    if(b.dataset.t==="op")b.classList.toggle("chosen",pending===b.dataset.v);
  });
@@ -87,21 +87,25 @@ function commitPendingSilently(){
  let ef=effect(v,pending,active); if(!Number.isFinite(ef)) return false;
  let pos=Math.min(target,data[active].length);
  data[active].splice(pos,0,{value:v,op:pending,effect:ef});
- target=pos+1; current=""; pending=null; save();
+ target=pos+1; current=""; pending="+"; save();
  return true;
 }
 function chooseCell(i,r){
- commitPendingSilently();
- active=i;target=r;pending=null;current="";
- render();updateScreen();
- $("expr").textContent=names[i]+" "+(r+1)+"行目 → 四則演算を選択";
+ // Commit the value in the previously selected cell BEFORE changing active/target.
+ if(current!==""){
+   commitPendingSilently();
+ }
+ active=i;
+ target=r;
+ pending="+";
+ current="";
+ render();
+ updateScreen();
+ $("expr").textContent=names[i]+" "+(r+1)+"行目：数字入力で＋ / 必要なら − × ÷ を選択";
 }
 function chooseOp(op){pending=op;current="";updateScreen();$("expr").textContent=names[active]+" "+(target+1)+"行目："+op+" → 数字を入力"}
 function number(v){
- if(!pending){
-   $("expr").textContent="先に ＋・−・×・÷ のどれかを押してください";
-   return;
- }
+ if(!pending) pending="+";
  if(v==="."){
    if(current.includes("."))return;
    current=current===""?"0.":current+".";
@@ -115,21 +119,39 @@ function commit(){
  if(!pending){$("expr").textContent="先に四則演算を選択";return}
  if(current===""||current==="0."){$("expr").textContent="数字を入力してください";return}
  let v=Number(current);if(!Number.isFinite(v))return;let ef=effect(v,pending,active);if(!Number.isFinite(ef)){$("expr").textContent="0では割れません";return}
- let pos=Math.min(target,data[active].length);data[active].splice(pos,0,{value:v,op:pending,effect:ef});target=pos+1;current="";pending=null;save();render();updateScreen();$("expr").textContent=names[active]+" "+(pos+1)+"行目に入力完了"
+ let pos=Math.min(target,data[active].length);data[active].splice(pos,0,{value:v,op:pending,effect:ef});target=pos+1;current="";pending="+";save();render();updateScreen();$("expr").textContent=names[active]+" "+(pos+1)+"行目に入力完了"
 }
 function buildKeys(){
  let ks=[["7","n"],["8","n"],["9","n"],["÷","op"],["4","n"],["5","n"],["6","n"],["×","op"],["1","n"],["2","n"],["3","n"],["-","op"],["0","n"],[".","n"],["C","c"],["+","op"],["±","sign"],["←","back"],["=","eq"],["AC","all"]];
  ks.forEach(([v,t])=>{let b=document.createElement("button");b.type="button";b.className="key "+(t==="op"?"opkey ":"")+(t==="eq"?"eq ":"")+(t==="c"||t==="all"?"danger ":"");b.textContent=v;b.dataset.t=t;b.dataset.v=v;$("keys").appendChild(b)});updateKeyState();
 }
 $("keys").addEventListener("click",e=>{let b=e.target.closest("button");if(!b)return;e.preventDefault();let t=b.dataset.t,v=b.dataset.v;
- if(t==="n")number(v);else if(t==="op")chooseOp(v);else if(t==="eq")commit();else if(t==="c"){current="";updateScreen()}
+ if(t==="n")number(v);else if(t==="op")chooseOp(v);else if(t==="eq")commit();else if(t==="c"){current="";pending="+";updateScreen()}
  else if(t==="back"){current=current.slice(0,-1);updateScreen()}else if(t==="sign"){if(current!=="")current=String(-Number(current));updateScreen()}
- else if(t==="all"){data[active]=[];points[active]=0;target=0;pending=null;current="";save();render();updateScreen()}
+ else if(t==="all"){data[active]=[];points[active]=0;target=0;pending="+";current="";save();render();updateScreen()}
 });
+$("cols").addEventListener("pointerdown",function(e){
+ // When another calculation cell is touched, save the current number first.
+ let cell=e.target.closest(".cell");
+ if(cell && current!==""){
+   let newCol=Number(cell.dataset.col), newRow=Number(cell.dataset.row);
+   if(newCol!==active || newRow!==target){
+     commitPendingSilently();
+     active=newCol;
+     target=newRow;
+     pending="+";
+     current="";
+     render();
+     updateScreen();
+     $("expr").textContent=names[active]+" "+(target+1)+"行目：数字入力で＋";
+     e.preventDefault();
+   }
+ }
+},true);
 $("cols").addEventListener("click",e=>{
  if(e.target.matches("input"))return;
  if(e.target.dataset.del){let [i,r]=e.target.dataset.del.split(":").map(Number);data[i].splice(r,1);active=i;target=Math.min(r,data[i].length);save();render();return}
- if(e.target.dataset.ac!==undefined){let i=Number(e.target.dataset.ac);data[i]=[];points[i]=0;active=i;target=0;save();render();return}
+ if(e.target.dataset.ac!==undefined){let i=Number(e.target.dataset.ac);data[i]=[];points[i]=0;active=i;target=0;pending="+";current="";save();render();return}
  if(e.target.dataset.copy!==undefined){copySource=Number(e.target.dataset.copy);openCopy();return}
  let c=e.target.closest(".cell");if(c)chooseCell(Number(c.dataset.col),Number(c.dataset.row))
 });
