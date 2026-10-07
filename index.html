@@ -74,6 +74,16 @@
  .cell{height:34px;font-size:15px}
  .key{font-size:23px}
 }
+
+.ipadNumberInput{
+ width:100%;height:44px;border:2px solid #333;border-radius:7px;background:#fff;
+ font-size:22px;font-weight:700;text-align:right;padding:0 10px;color:#111;
+ -webkit-appearance:none;appearance:none;
+}
+.ipadNumberInput.ready{border-color:#ffd43b;box-shadow:0 0 0 2px #ffd43b inset}
+@media (orientation:landscape) and (min-width:768px){
+ .ipadNumberInput{height:38px;font-size:19px}
+}
 </style>
 </head>
 <body>
@@ -82,9 +92,9 @@
  <div class="main">
   <div class="lists" id="lists"></div>
   <div class="calc">
-   <div class="display"><div class="expr" id="expr">マス選択 → 四則演算 → 数字入力 → ＝</div><div class="screen" id="screen">0</div></div>
-   <input id="ipadInput" type="text" inputmode="decimal" autocomplete="off" autocorrect="off" spellcheck="false"
- style="position:absolute;opacity:.01;width:1px;height:1px;left:-2px;bottom:2px">
+   <div class="display"><div class="expr" id="expr">マス選択 → 四則演算 → 数字入力欄をタップ → iPadで数字入力 → ＝</div><div class="screen" id="screen">0</div></div>
+   <input id="ipadInput" class="ipadNumberInput" type="text" inputmode="decimal"
+ autocomplete="off" autocorrect="off" spellcheck="false" placeholder="数字を入力">
 <div class="keys" id="keys"></div>
   </div>
  </div>
@@ -160,14 +170,15 @@ function commit(){
  target=pos+1;current="";fresh=true;
  document.getElementById("expr").textContent=names[active]+" "+(pos+1)+"行目に入力";
  save();render();setScreen();
- var inp=document.getElementById("ipadInput");inp.value="";
+ var inp=document.getElementById("ipadInput");inp.value="";inp.classList.remove("ready");
 }
 function selectOp(op){
  pendingOp=op;current="";fresh=true;
  document.getElementById("expr").textContent=names[active]+" "+(target+1)+"行目："+op+" → 数字を入力";
  setScreen();
  var inp=document.getElementById("ipadInput");inp.value="";
- setTimeout(function(){inp.focus()},0);
+ inp.classList.add("ready");
+ document.getElementById("expr").textContent=names[active]+" "+(target+1)+"行目："+op+" → 下の数字入力欄をタップ";
 }
 function buildKeys(){
  var keys=[["÷","preop"],["×","preop"],["-","preop"],["+","preop"],["C","c"],["←","b"],["=","e"],["AC","a"]];
@@ -216,6 +227,13 @@ document.getElementById("keys").addEventListener("click",function(e){
  else if(t==="a"){data[active]=[];points[active]=0;target=0;current="";pendingOp=null;save();setScreen();render()}
 });
 var ipadInput=document.getElementById("ipadInput");
+ipadInput.addEventListener("focus",function(){
+ if(!pendingOp){
+   document.getElementById("expr").textContent="先に ＋ − × ÷ を選んでください";
+ }else{
+   document.getElementById("expr").textContent=names[active]+" "+(target+1)+"行目："+pendingOp+" 数字入力中";
+ }
+});
 ipadInput.addEventListener("input",function(){
  var v=this.value.replace(/,/g,"").replace(/[^0-9.]/g,"");
  var first=v.indexOf(".");if(first>=0)v=v.slice(0,first+1)+v.slice(first+1).replace(/\./g,"");
