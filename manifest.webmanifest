@@ -1,0 +1,16 @@
+{
+  "name": "5行電卓",
+  "short_name": "5行電卓",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#148252",
+  "theme_color": "#148252",
+  "icons": [
+    {
+      "src": "apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}
