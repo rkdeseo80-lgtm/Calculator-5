@@ -194,6 +194,59 @@ button,input{font:inherit}.app{height:100dvh;padding:4px;display:grid;grid-templ
   }
 }
 
+
+/* Fill the unused lower area with the 8 visible calculation rows */
+.cols{
+  min-height:0 !important;
+  height:100% !important;
+}
+.col{
+  min-height:0 !important;
+  height:100% !important;
+  display:flex !important;
+  flex-direction:column !important;
+}
+.summary{
+  flex:0 0 auto !important;
+}
+.paper{
+  --cell-h:auto !important;
+  flex:1 1 auto !important;
+  height:auto !important;
+  min-height:0 !important;
+  max-height:none !important;
+  overflow-y:auto !important;
+  overflow-x:hidden !important;
+  display:grid !important;
+  grid-auto-rows:calc(100% / 8) !important;
+  align-content:start !important;
+  -webkit-overflow-scrolling:touch;
+}
+.paper .cell{
+  box-sizing:border-box !important;
+  height:auto !important;
+  min-height:0 !important;
+  max-height:none !important;
+  display:flex !important;
+  align-items:center !important;
+}
+.paper .cell .val,
+.paper .cell .value,
+.paper .cell strong,
+.paper .cell span:not(.op):not(.del){
+  font-size:42px !important;
+  line-height:1 !important;
+  font-weight:900 !important;
+}
+.paper .cell .op{
+  font-size:27px !important;
+  line-height:1 !important;
+  font-weight:900 !important;
+}
+.paper .cell .del{
+  font-size:17px !important;
+}
+
 </style>
 </head>
 <body>
