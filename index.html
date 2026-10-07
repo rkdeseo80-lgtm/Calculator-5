@@ -247,6 +247,56 @@ button,input{font:inherit}.app{height:100dvh;padding:4px;display:grid;grid-templ
   font-size:17px !important;
 }
 
+
+/* Requested sizing: small calculator display, very large numbers inside list cells */
+.screen{
+  min-height:66px !important;
+  font-size:30px !important;
+  line-height:1 !important;
+  font-weight:800 !important;
+}
+.expr{
+  font-size:10px !important;
+  min-height:18px !important;
+}
+
+/* Make the actual entered values in the left list cells dominant */
+.paper .cell{
+  position:relative !important;
+  padding:0 34px 0 8px !important;
+}
+.paper .cell .op{
+  font-size:30px !important;
+  line-height:1 !important;
+  font-weight:900 !important;
+  flex:0 0 auto !important;
+}
+.paper .cell .val,
+.paper .cell .value,
+.paper .cell strong,
+.paper .cell span:not(.op):not(.del){
+  font-size:48px !important;
+  line-height:1 !important;
+  font-weight:900 !important;
+  letter-spacing:-1px !important;
+}
+.paper .cell .del{
+  position:absolute !important;
+  right:4px !important;
+  top:4px !important;
+  font-size:17px !important;
+}
+@media (min-width:1000px){
+  .paper .cell .op{font-size:32px !important;}
+  .paper .cell .val,
+  .paper .cell .value,
+  .paper .cell strong,
+  .paper .cell span:not(.op):not(.del){
+    font-size:52px !important;
+  }
+  .screen{font-size:32px !important;}
+}
+
 </style>
 </head>
 <body>
